@@ -1,0 +1,174 @@
+{% extends 'main.html' %}
+
+{% block title %}Users{% endblock %}
+
+{% block content %}
+
+<div class="container" id="add-users">
+	<h2>Add Users</h2>
+	<form class="row" action="{% url 'users' %}" method="post" id="add-users-form">
+	  {% csrf_token %}
+	  <div class="mb-3 col-6">
+	    <label for="username" class="form-label">Username</label>
+	    <input type="text" class="form-control" id="username" required>
+	  </div>
+	  <div class="mb-3 col-6">
+	    <label for="name" class="form-label">Name</label>
+	    <input type="text" class="form-control" id="name" required>
+	  </div>
+	  <div class="mb-3 col-6">
+	    <label for="email" class="form-label">Email address</label>
+	    <input type="email" class="form-control" id="email" required>
+	  </div>
+	  <div class="mb-3 col-6">
+	    <label for="mobile" class="form-label">Mobile</label>
+	    <input type="text" class="form-control" id="mobile" required>
+	  </div>
+	  <div class="mb-3 col-6">
+	    <label for="age" class="form-label">Age</label>
+	    <input type="text" class="form-control" id="age" required>
+	  </div>
+	  <div class="mb-3 col-6">
+	  	<label for="sex" class="form-label">Sex</label>
+		<select class="form-select" id="sex">
+			<option value="Male">Male</option>
+			<option value="Female">Female</option>
+			<option value="Unspecified">Unspecified</option>
+		</select>
+	  </div>
+	  <div class="mb-3 col-6">
+	  	<label for="salutation" class="form-label">Salutation</label>
+		<select class="form-select" id="salutation">
+			<option value="Dr">Dr</option>
+			<option value="Mr">Mr</option>
+			<option value="Ms">Ms</option>
+			<option value="Prof">Prof</option>
+			<option value="Rev">Rev</option>
+		</select>
+	  </div>
+	  <div class="mb-3 col-6">
+	  	<label for="health" class="form-label">Health</label>
+		<select class="form-select" id="health">
+			<option value="True">Fine</option>
+			<option value="False">Not fine</option>
+		</select>
+	  </div>
+	  <div class="mb-3 col-6">
+	    <label for="password1" class="form-label">Password</label>
+	    <input type="password" class="form-control" id="password1" required>
+	  </div>
+	  <div class="mb-3 col-6">
+	    <label for="password2" class="form-label">Confirm Password</label>
+	    <input type="password" class="form-control" id="password2" required>
+	  </div>
+	  <div class="mb-3 col-12 d-flex justify-content-center">
+	  	<button type="submit" class="btn btn-primary px-5">Submit</button>
+	  </div>
+	</form>
+</div>
+<div class="container">
+	<h2>Users</h2>
+	<div id="filter"></div>
+	<table class="table">
+	  <thead>
+	    <tr>
+	      <th scope="col">#</th>
+	      <th scope="col">Salutation</th>
+	      <th scope="col">Name</th>
+	      <th scope="col">Username</th>
+	      <th scope="col">Email</th>
+	      <th scope="col">Mobile</th>
+	      <th scope="col">Age</th>
+	      <th scope="col">Sex</th>
+	      <th scope="col">Health</th>
+	      <th scope="col">Edit</th>
+	      <th scope="col">Delete</th>
+	    </tr>
+	  </thead>
+	  <tbody id="table-body">
+	  	{% for user in users %}
+	    <tr>
+	      <th scope="row">{{forloop.counter}}</th>
+	      <td>{{user.salutation}}</td>
+	      <td>{{user.name}}</td>
+	      <td>{{user.username}}</td>
+	      <td>{{user.email}}</td>
+	      <td>{{user.mobile}}</td>
+	      <td>{{user.age}}</td>
+	      <td>{{user.sex}}</td>
+	      <td>{{user.health}}</td>
+	      <td><a class="edit-users" href="{% url 'user-edit' %}" data-id="{{user.id}}"><i class="bi bi-pencil-square"></i></a></td>
+	      <td><a href="{% url 'user-delete' user.id %}" class="delete-users"><i class="bi bi-trash-fill"></i></a></td>
+	    </tr>
+	    {% endfor %}
+	  </tbody>
+	</table>
+	<!-- Edit Modal -->
+	<div class="modal fade" id="edit-user-modal" tabindex="-1" role="dialog" aria-labelledby="edit-user-title" aria-hidden="true">
+	  <div class="modal-dialog modal-dialog-centered" role="document">
+	    <div class="modal-content">
+	    	<form method="post" id="edit-user-form">
+	    	  {% csrf_token %}
+	    	  <input type="hidden" name="edit-id" value="">
+		      <div class="modal-header">
+		        <h5 class="modal-title" id="edit-user-title">Edit User</h5>
+		        <button type="button" class="btn-close" data-dismiss="modal" aria-label="Close" onclick="$('#edit-user-modal').modal('hide');">
+		        </button>
+		      </div>
+		      <div class="modal-body row">
+		        <div class="mb-3 col-6">
+				  <label for="username-edit" class="form-label">Username</label>
+				  <input type="text" class="form-control" id="username-edit" required>
+				</div>
+				<div class="mb-3 col-6">
+				  <label for="name-edit" class="form-label">Name</label>
+				  <input type="text" class="form-control" id="name-edit" required>
+				</div>
+				<div class="mb-3 col-6">
+				  <label for="email-edit" class="form-label">Email address</label>
+				  <input type="email" class="form-control" id="email-edit" required>
+				</div>
+				<div class="mb-3 col-6">
+				  <label for="mobile-edit" class="form-label">Mobile</label>
+				  <input type="text" class="form-control" id="mobile-edit" required>
+				</div>
+				<div class="mb-3 col-6">
+				  <label for="age-edit" class="form-label">Age</label>
+				  <input type="text" class="form-control" id="age-edit" required>
+				</div>
+				<div class="mb-3 col-6">
+				 	<label for="sex-edit" class="form-label">Sex</label>
+					<select class="form-select" id="sex-edit">
+						<option value="Male">Male</option>
+						<option value="Female">Female</option>
+						<option value="Unspecified">Unspecified</option>
+					</select>
+				</div>
+				<div class="mb-3 col-6">
+					<label for="salutation-edit" class="form-label">Salutation</label>
+					<select class="form-select" id="salutation-edit">
+						<option value="Dr">Dr</option>
+						<option value="Mr">Mr</option>
+						<option value="Ms">Ms</option>
+						<option value="Prof">Prof</option>
+						<option value="Rev">Rev</option>
+					</select>
+				</div>
+				<div class="mb-3 col-6">
+					<label for="health-edit" class="form-label">Health</label>
+					<select class="form-select" id="health-edit">
+						<option value="True">Fine</option>
+						<option value="False">Not fine</option>
+					</select>
+				</div>
+		      </div>
+		      <div class="modal-footer">
+		        <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="$('#edit-user-modal').modal('hide');">Close</button>
+		        <button type="submit" class="btn btn-primary">Save changes</button>
+		      </div>
+		    </form>
+	    </div>
+	  </div>
+	</div>
+</div>
+{% endblock %}
