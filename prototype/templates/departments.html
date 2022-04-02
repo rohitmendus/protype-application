@@ -1,0 +1,53 @@
+{% extends 'main.html' %}
+
+{% block title %}Programmes{% endblock %}
+
+{% block content %}
+<div class="container add">
+	<h2>Add Departments</h2>
+	<form class="row" action="{% url 'departments' %}" method="post" id="add-departments-form">
+	  {% csrf_token %}
+	  <div class="mb-3 col-6">
+	    <label for="name" class="form-label">Department Name</label>
+	    <input type="text" class="form-control" id="name" required>
+	  </div>
+	   <div class="form-group mb-3">
+	    <label for="description">Description</label>
+	    <textarea class="form-control" id="description" rows="3" required></textarea>
+	  </div>
+	  <div class="mb-3 col-12 d-flex justify-content-center">
+	  	<button type="submit" class="btn btn-primary px-5">Submit</button>
+	  </div>
+	</form>
+</div>
+<div class="container">
+	<h2 mb-5>Upload Users with Department</h2>
+	<p>Upload users with department by filling this template.</p>
+	<a class="btn btn-primary" href="{% url 'download_user_dept' %}"><i class="bi bi-download mx-2"></i>Download Template</a>
+	<form method="post" action="{% url 'upload_user_dept' %}" enctype='multipart/form-data'>
+		{% csrf_token %}
+		<div class="mb-3 mt-3">
+		  <label for="formFile" class="form-label">Upload</label>
+		  <input class="form-control" type="file" id="formFile" name="user_dept_file" accept=".xls,.xlsx">
+		</div>
+		<div class="mb-3 col-12 d-flex justify-content-center">
+		  	<button type="submit" class="btn btn-primary px-5">Submit</button>
+		</div>
+	</form>
+</div>
+<div class="container">
+	<h2>Upload Programmes with Department</h2>
+	<p>Upload programmes with department by filling this template.</p>
+	<a class="btn btn-primary" href="{% url 'download_pgm_dept' %}"><i class="bi bi-download mx-2"></i>Download Template</a>
+	<form method="post" action="{% url 'upload_pgm_dept' %}" enctype='multipart/form-data'>
+		{% csrf_token %}
+		<div class="mb-3 mt-3">
+		  <label for="formFile1" class="form-label">Upload</label>
+		  <input class="form-control" type="file" id="formFile1" name="pgm_dept_file" accept=".xls,.xlsx">
+		</div>
+		<div class="mb-3 col-12 d-flex justify-content-center">
+		  	<button type="submit" class="btn btn-primary px-5">Submit</button>
+		</div>
+	</form>
+</div>
+{% endblock %}

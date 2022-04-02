@@ -4,7 +4,7 @@
 
 {% block content %}
 
-<div class="container" id="add-users">
+<div class="container add">
 	<h2>Add Users</h2>
 	<form class="row" action="{% url 'users' %}" method="post" id="add-users-form">
 	  {% csrf_token %}
@@ -68,7 +68,18 @@
 </div>
 <div class="container">
 	<h2>Users</h2>
-	<div id="filter"></div>
+	<div id="filter">
+	  <div class="input-group">
+	  	  <div class="mb-3">
+	  	  </div>
+		  <div class="form-outline">
+		    <input type="search" id="search" class="form-control" />
+		  </div>
+		  <button type="button" class="btn btn-primary">
+		    <i class="bi bi-search"></i>
+		  </button>
+	  </div>
+	</div>
 	<table class="table">
 	  <thead>
 	    <tr>
@@ -81,6 +92,7 @@
 	      <th scope="col">Age</th>
 	      <th scope="col">Sex</th>
 	      <th scope="col">Health</th>
+	      <th scope="col">Department</th>
 	      <th scope="col">Edit</th>
 	      <th scope="col">Delete</th>
 	    </tr>
@@ -90,13 +102,14 @@
 	    <tr>
 	      <th scope="row">{{forloop.counter}}</th>
 	      <td>{{user.salutation}}</td>
-	      <td>{{user.name}}</td>
+	      <td class="name-table">{{user.name}}</td>
 	      <td>{{user.username}}</td>
 	      <td>{{user.email}}</td>
 	      <td>{{user.mobile}}</td>
 	      <td>{{user.age}}</td>
 	      <td>{{user.sex}}</td>
 	      <td>{{user.health}}</td>
+	      <td>{{user.dept}}</td>
 	      <td><a class="edit-users" href="{% url 'user-edit' %}" data-id="{{user.id}}"><i class="bi bi-pencil-square"></i></a></td>
 	      <td><a href="{% url 'user-delete' user.id %}" class="delete-users"><i class="bi bi-trash-fill"></i></a></td>
 	    </tr>
@@ -160,6 +173,10 @@
 						<option value="True">Fine</option>
 						<option value="False">Not fine</option>
 					</select>
+				</div>
+				<div class="mb-3 col-12">
+					<label for="dept-edit" class="form-label">Department</label>
+					<select class="form-select" id="dept-edit"></select>
 				</div>
 		      </div>
 		      <div class="modal-footer">
