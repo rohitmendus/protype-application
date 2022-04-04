@@ -79,6 +79,15 @@
 		    <i class="bi bi-search"></i>
 		  </button>
 	  </div>
+	  <div class="mb-3 mt-3 col-4">
+		<label for="dept-fiter" class="form-label">Department</label>
+		<select class="form-select" id="dept-filter">
+			<option value="Select All">Select All</option>
+			{% for dept in depts %}
+			<option value="{{dept}}">{{dept}}</option>
+			{% endfor %}
+		</select>
+	  </div>
 	</div>
 	<table class="table">
 	  <thead>
@@ -109,7 +118,7 @@
 	      <td>{{user.age}}</td>
 	      <td>{{user.sex}}</td>
 	      <td>{{user.health}}</td>
-	      <td>{{user.dept}}</td>
+	      <td class="dept-table">{{user.dept}}</td>
 	      <td><a class="edit-users" href="{% url 'user-edit' %}" data-id="{{user.id}}"><i class="bi bi-pencil-square"></i></a></td>
 	      <td><a href="{% url 'user-delete' user.id %}" class="delete-users"><i class="bi bi-trash-fill"></i></a></td>
 	    </tr>

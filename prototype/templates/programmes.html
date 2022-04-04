@@ -33,6 +33,15 @@
 		    <i class="bi bi-search"></i>
 		  </button>
 	  </div>
+	  <div class="mb-3 mt-3 col-4">
+		<label for="dept-fiter" class="form-label">Department</label>
+		<select class="form-select" id="dept-filter">
+			<option value="Select All">Select All</option>
+			{% for dept in depts %}
+			<option value="{{dept}}">{{dept}}</option>
+			{% endfor %}
+		</select>
+	  </div>
 	</div>
 	<table class="table">
 	  <thead>
@@ -51,7 +60,7 @@
 	      <th scope="row">{{forloop.counter}}</th>
 	      <td class="name-table">{{programme.name}}</td>
 	      <td>{{programme.description}}</td>
-	      <td>{{programme.department}}</td>
+	      <td class="dept-table">{{programme.dept}}</td>
 	      <td><a class="edit-programmes" href="{% url 'programme-edit' %}" data-id="{{programme.id}}"><i class="bi bi-pencil-square"></i></a></td>
 	      <td><a href="{% url 'programme-delete' programme.id %}" class="delete-programmes"><i class="bi bi-trash-fill"></i></a></td>
 	    </tr>
@@ -75,9 +84,13 @@
 				  <label for="name" class="form-label">Programme Name</label>
 				  <input type="text" class="form-control" id="name-edit" required>
 				</div>
-				 <div class="form-group mb-3">
+				<div class="form-group mb-3">
 				  <label for="description">Description</label>
 				  <textarea class="form-control" id="description-edit" rows="3" required></textarea>
+				</div>
+				<div class="mb-3 col-12">
+					<label for="dept-edit" class="form-label">Department</label>
+					<select class="form-select" id="dept-edit"></select>
 				</div>
 		      </div>
 		      <div class="modal-footer">

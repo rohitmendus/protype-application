@@ -28,7 +28,7 @@ class UsersView(View):
 				'mobile': i.mobile, 'age': i.age, 'sex': i.sex, 'salutation': i.salutation,
 				'health': health, 'id': user_obj.id, 'dept': dept}
 			users.append(user)
-		context = {'users': users}
+		context = {'users': users, 'depts': Department.objects.values_list('name', flat=True)}
 		return render(request, self.template, context)
 
 	def post(self, request):
@@ -165,9 +165,17 @@ class UsersEdit(View):
 		data = {'users': users}
 		return JsonResponse(data)
 
-
-# def RenderUpdatedProgrammeData():
-	
+#Renders programme data
+def RenderProgrammeData():
+	pgms = []
+	for pgm in Programme.objects.all():
+		if pgm.department == None:
+			dept = ""
+		else:
+			dept = pgm.department.name
+		pgm_obj = {'id': pgm.id, 'name': pgm.name, 'description': pgm.description, 'dept': dept}
+		pgms.append(pgm_obj)
+	return pgms
 
 #ProgrammesView
 #self.get() - Renders the template and sents programmes' details
@@ -175,7 +183,7 @@ class UsersEdit(View):
 class ProgrammesView(View):
 	template = 'programmes.html'
 	def get(self, request):
-		context = {'programmes': Programme.objects.all()}
+		context = {'programmes': RenderProgrammeData(), 'depts': Department.objects.values_list('name', flat=True)}
 		return render(request, self.template, context)
 
 	def post(self, request):
@@ -185,7 +193,7 @@ class ProgrammesView(View):
 		programme = Programme(name=name, description=description)
 		programme.save()
 		#Sents updated data to js to render it
-		data = {'programmes': list(Programme.objects.all().values())}
+		data = {'programmes': RenderProgrammeData()}
 		return JsonResponse(data, safe=False)
 
 #ProgrammesDelete
@@ -195,7 +203,7 @@ class ProgrammesDelete(View):
 		programme = Programme.objects.get(id=id)
 		programme.delete()
 		#Sents updated data to js to render it
-		data = {'programmes': list(Programme.objects.all().values())}
+		data = {'programmes': RenderProgrammeData()}
 		return JsonResponse(data, safe=False)
 
 #ProgrammesEdit
@@ -204,19 +212,28 @@ class ProgrammesDelete(View):
 class ProgrammesEdit(View):
 	def get(self, request):
 		id_1 = request.GET.get('id')
-		data = {'programmes': model_to_dict(Programme.objects.get(id=id_1))}
+		pgm = Programme.objects.get(id=id_1)
+		if pgm.department == None:
+			dept = ""
+		else:
+			dept = pgm.department.name
+		depts = list(Department.objects.values_list('name', flat=True))
+		data = {'id': pgm.id, 'name': pgm.name, 'description': pgm.description, 
+			'dept': dept, 'depts': depts}
 		return JsonResponse(data)
 
 	def post(self, request):
 		id_2 = request.POST.get('id')
 		name = request.POST.get('name')
 		description = request.POST.get('description')
+		dept = Department.objects.get(name=request.POST.get('dept'))
 		programme = Programme.objects.get(id=id_2)
 		programme.name = name
 		programme.description = description
+		programme.department = dept
 		programme.save()
 		#Sents updated data to js to render it
-		data = {'programmes': list(Programme.objects.all().values())}
+		data = {'programmes': RenderProgrammeData()}
 		return JsonResponse(data, safe=False)
 
 
@@ -257,6 +274,11 @@ class DownloadFileUser(View):
 				toRemove.append(validation)
 		for rmValidation in toRemove:
 			ws.data_validations.dataValidation.remove(rmValidation)
+
+		#Removing user names from existing template
+		for x in range(2, 102):
+			ws['A'+str(x)].value=""
+
 		#Adding new drop downs
 		department_names = Department.objects.values_list('name', flat=True)
 		dlist1 = ", ".join(department_names)
@@ -266,10 +288,12 @@ class DownloadFileUser(View):
 		dv.add('B2:B100')
 
 		#Adding user names
-		users = ProfileUser.objects.values_list('name',flat=True).filter(department__isnull=True)
+		users = ProfileUser.objects.values_list('name', 'department')
 		counter = 2
 		for user in users:
-			ws['A'+str(counter)].value = user
+			ws['A'+str(counter)].value = user[0]
+			if user[1] != None:
+				ws['B'+str(counter)].value = Department.objects.get(id=user[1]).name
 			counter += 1
 		wb.save(filepath)
 
@@ -280,6 +304,7 @@ class DownloadFileUser(View):
 		response['Content-Disposition'] = "attachment; filename=%s" % filename
 		return response
 
+#Uploads the user and department mapping to the db from the uploaded excel file
 class UploadUserDeptView(View):
 	def post(self, request):
 		file = request.FILES.get('user_dept_file')
@@ -287,7 +312,7 @@ class UploadUserDeptView(View):
 		data = []
 		wb = openpyxl.load_workbook(file)
 		ws = wb.active
-		count = ProfileUser.objects.filter(department__isnull=True).count()
+		count = ProfileUser.objects.all().count()
 		for y in range(2, count+2):
 			user_name = ws['A'+str(y)].value
 			department_name = ws['B'+str(y)].value
@@ -295,6 +320,7 @@ class UploadUserDeptView(View):
 				data_set = {'user_name':user_name, 'department_name': department_name}
 				data.append(data_set)
 		
+		print(data)
 		for i in data:
 			user = ProfileUser.objects.get(name=i['user_name'])
 			department = Department.objects.get(name=i['department_name'])
@@ -305,7 +331,8 @@ class UploadUserDeptView(View):
 				return HttpResponse("An error occured!")
 		return redirect("/departments")
 
-
+#DownloadFileProgramme
+#self.get() - Downloads the excel template for uploading programmes with department
 class DownloadFileProgramme(View):
 	def get(self, request):
 		# Getting file path
@@ -324,6 +351,11 @@ class DownloadFileProgramme(View):
 				toRemove.append(validation)
 		for rmValidation in toRemove:
 			ws1.data_validations.dataValidation.remove(rmValidation)
+
+		#Removing programme names from existing template
+		for x in range(2, 102):
+			ws1['A'+str(x)].value=""
+
 		#Adding new drop downs
 		department_names = Department.objects.values_list('name', flat=True)
 		dlist1 = ", ".join(department_names)
@@ -333,10 +365,12 @@ class DownloadFileProgramme(View):
 		dv.add('B2:B100')
 
 		#Adding programme names
-		programmes = Programme.objects.values_list('name',flat=True).filter(department__isnull=True)
+		programmes = Programme.objects.values_list('name', 'department')
 		counter = 2
 		for pgm in programmes:
-			ws1['A'+str(counter)].value = pgm
+			ws1['A'+str(counter)].value = pgm[0]
+			if pgm[1] != None:
+				ws1['B'+str(counter)].value = Department.objects.get(id=pgm[1]).name
 			counter += 1
 		wb1.save(filepath)
 
@@ -347,6 +381,7 @@ class DownloadFileProgramme(View):
 		response['Content-Disposition'] = "attachment; filename=%s" % filename
 		return response
 
+#Uploads the programme and department mapping to the db from the uploaded excel file
 class UploadProgrammeDeptView(View):
 	def post(self, request):
 		file = request.FILES.get('pgm_dept_file')
@@ -354,7 +389,7 @@ class UploadProgrammeDeptView(View):
 		data = []
 		wb1 = openpyxl.load_workbook(file)
 		ws1 = wb1.active
-		count = Programme.objects.filter(department__isnull=True).count()
+		count = Programme.objects.all().count()
 		for y in range(2, count+2):
 			pgm_name = ws1['A'+str(y)].value
 			department_name = ws1['B'+str(y)].value
