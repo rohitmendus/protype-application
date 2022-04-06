@@ -10,56 +10,47 @@
 	  {% csrf_token %}
 	  <div class="mb-3 col-6">
 	    <label for="username" class="form-label">Username</label>
-	    <input type="text" class="form-control" id="username" required>
+	    {{form1.username}}
 	  </div>
 	  <div class="mb-3 col-6">
 	    <label for="name" class="form-label">Name</label>
-	    <input type="text" class="form-control" id="name" required>
+	    {{form2.name}}
 	  </div>
 	  <div class="mb-3 col-6">
 	    <label for="email" class="form-label">Email address</label>
-	    <input type="email" class="form-control" id="email" required>
+	    {{form1.email}}
 	  </div>
 	  <div class="mb-3 col-6">
 	    <label for="mobile" class="form-label">Mobile</label>
-	    <input type="text" class="form-control" id="mobile" required>
+	    {{form2.mobile}}
 	  </div>
 	  <div class="mb-3 col-6">
 	    <label for="age" class="form-label">Age</label>
-	    <input type="text" class="form-control" id="age" required>
+	    {{form2.age}}
 	  </div>
 	  <div class="mb-3 col-6">
 	  	<label for="sex" class="form-label">Sex</label>
-		<select class="form-select" id="sex">
-			<option value="Male">Male</option>
-			<option value="Female">Female</option>
-			<option value="Unspecified">Unspecified</option>
-		</select>
+		{{form2.sex}}
 	  </div>
 	  <div class="mb-3 col-6">
 	  	<label for="salutation" class="form-label">Salutation</label>
-		<select class="form-select" id="salutation">
-			<option value="Dr">Dr</option>
-			<option value="Mr">Mr</option>
-			<option value="Ms">Ms</option>
-			<option value="Prof">Prof</option>
-			<option value="Rev">Rev</option>
-		</select>
+		{{form2.salutation}}
 	  </div>
 	  <div class="mb-3 col-6">
-	  	<label for="health" class="form-label">Health</label>
-		<select class="form-select" id="health">
-			<option value="True">Fine</option>
-			<option value="False">Not fine</option>
-		</select>
+	  	<label for="dept" class="form-label">Department</label>
+		{{form2.department}}
 	  </div>
 	  <div class="mb-3 col-6">
 	    <label for="password1" class="form-label">Password</label>
-	    <input type="password" class="form-control" id="password1" required>
+	    {{form1.password1}}
 	  </div>
 	  <div class="mb-3 col-6">
 	    <label for="password2" class="form-label">Confirm Password</label>
-	    <input type="password" class="form-control" id="password2" required>
+	    {{form1.password2}}
+	  </div>
+	  <div class="mb-3 col-6">
+	  	{{form2.health}}
+	  	<label for="health" class="form-check-label">Health</label>
 	  </div>
 	  <div class="mb-3 col-12 d-flex justify-content-center">
 	  	<button type="submit" class="btn btn-primary px-5">Submit</button>

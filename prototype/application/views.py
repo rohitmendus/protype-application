@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponse
 from django.views import View
 from .models import *
+from .forms import ProfileForm, UserForm
 from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
 import mimetypes, os, openpyxl
@@ -28,26 +29,34 @@ class UsersView(View):
 				'mobile': i.mobile, 'age': i.age, 'sex': i.sex, 'salutation': i.salutation,
 				'health': health, 'id': user_obj.id, 'dept': dept}
 			users.append(user)
-		context = {'users': users, 'depts': Department.objects.values_list('name', flat=True)}
+		form2 = ProfileForm()
+		form1 = UserForm()
+		context = {'users': users, 'depts': Department.objects.values_list('name', flat=True),
+			'form1': form1, 'form2': form2}
 		return render(request, self.template, context)
 
 	def post(self, request):
-		username = request.POST.get('username')
-		name = request.POST.get('name')
-		email = request.POST.get('email')
-		mobile = request.POST.get('mobile')
-		age = request.POST.get('age')
-		sex = request.POST.get('sex')
-		salutation = request.POST.get('salutation')
-		if request.POST.get('health') == "True":
-			health = True
-		else:
-			health = False
-		password1 = request.POST.get('password1')
-		user = User.objects.create_user(username=username, email=email, password=password1)
-		user.save()	
-		user_profile = ProfileUser(user=user, name=name, mobile=mobile, age=int(age), sex=sex, salutation=salutation, health=health)
-		user_profile.save()
+		# username = request.POST.get('username')
+		# name = request.POST.get('name')
+		# email = request.POST.get('email')
+		# mobile = request.POST.get('mobile')
+		# age = request.POST.get('age')
+		# sex = request.POST.get('sex')
+		# salutation = request.POST.get('salutation')
+		# if request.POST.get('health') == "True":
+		# 	health = True
+		# else:
+		# 	health = False
+		# password1 = request.POST.get('password1')
+		# user = User.objects.create_user(username=username, email=email, password=password1)
+		# user.save()	
+		# user_profile = ProfileUser(user=user, name=name, mobile=mobile, age=int(age), sex=sex, salutation=salutation, health=health)
+		# user_profile.save()
+		form1 = UserForm(request.POST['form1'])
+		form2 = ProfileForm(request.POST['form2'])
+		if form1.is_valid() and form2.is_valid():
+			form1.save()
+			form2.save()
 
 		#Sents updated data to js to render it
 		users_obj = ProfileUser.objects.all()
