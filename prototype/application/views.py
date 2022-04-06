@@ -2,10 +2,10 @@ from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponse
 from django.views import View
 from .models import *
-from .forms import ProfileForm, UserForm
+from .forms import *
 from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
-import mimetypes, os, openpyxl
+import mimetypes, os, openpyxl, json
 
 #UsersView
 #self.get() - Renders the template and sents users' details
@@ -30,33 +30,23 @@ class UsersView(View):
 				'health': health, 'id': user_obj.id, 'dept': dept}
 			users.append(user)
 		form2 = ProfileForm()
-		form1 = UserForm()
+		form1 = CreateUserForm()
 		context = {'users': users, 'depts': Department.objects.values_list('name', flat=True),
 			'form1': form1, 'form2': form2}
 		return render(request, self.template, context)
 
 	def post(self, request):
-		# username = request.POST.get('username')
-		# name = request.POST.get('name')
-		# email = request.POST.get('email')
-		# mobile = request.POST.get('mobile')
-		# age = request.POST.get('age')
-		# sex = request.POST.get('sex')
-		# salutation = request.POST.get('salutation')
-		# if request.POST.get('health') == "True":
-		# 	health = True
-		# else:
-		# 	health = False
-		# password1 = request.POST.get('password1')
-		# user = User.objects.create_user(username=username, email=email, password=password1)
-		# user.save()	
-		# user_profile = ProfileUser(user=user, name=name, mobile=mobile, age=int(age), sex=sex, salutation=salutation, health=health)
-		# user_profile.save()
-		form1 = UserForm(request.POST['form1'])
-		form2 = ProfileForm(request.POST['form2'])
+		form1 = CreateUserForm(request.POST)
+		form2 = ProfileForm(request.POST)
 		if form1.is_valid() and form2.is_valid():
-			form1.save()
-			form2.save()
+			user = form1.save()
+			profile = form2.save(commit=False)
+			profile.user = user
+			profile.save()
+		else:
+			errors = {**json.loads(form1.errors.as_json()), **json.loads(form2.errors.as_json())}
+			data = {'errors': errors, 'success': False}
+			return JsonResponse(data)
 
 		#Sents updated data to js to render it
 		users_obj = ProfileUser.objects.all()
@@ -75,7 +65,7 @@ class UsersView(View):
 				'mobile': i.mobile, 'age': i.age, 'sex': i.sex, 'salutation': i.salutation,
 				'health': health, 'id': user_obj_1.id, 'dept': dept}
 			users.append(user_1)
-		data = {'users': users}
+		data = {'users': users, 'success': True}
 		return JsonResponse(data)
 
 #UsersDelete
@@ -109,50 +99,64 @@ class UsersDelete(View):
 #self.get() - Gets user data to fill the modal form(request sent through ajax)
 #self.post() - Updates user data(request sent through ajax)
 class UsersEdit(View):
-	def get(self, request):
-		id_1 = request.GET.get('id')
-		user_obj = User.objects.get(id=id_1)
-		profile_obj = ProfileUser.objects.get(user_id=id_1)
-		depts = list(Department.objects.values_list('name', flat=True))
-		if profile_obj.department == None:
-			dept = ""
+	def get(self, request, id):
+		user_obj = User.objects.get(id=id)
+		profile_obj = ProfileUser.objects.get(user_id=id)
+		form1 = UpdateUserForm(instance=user_obj)
+		form2 = ProfileForm(instance=profile_obj)
+		data = f'''
+			<div class="mb-3 col-6">
+				<label for="username-edit" class="form-label">Username</label>
+				{form1['username']}
+			</div>
+			<div class="mb-3 col-6">
+				<label for="name-edit" class="form-label">Name</label>
+				{form2['name']}
+			</div>
+			<div class="mb-3 col-6">
+				<label for="email-edit" class="form-label">Email address</label>
+				{form1['email']}
+			</div>
+			<div class="mb-3 col-6">
+				<label for="mobile-edit" class="form-label">Mobile</label>
+				{form2['mobile']}
+			</div>
+			<div class="mb-3 col-6">
+				<label for="age-edit" class="form-label">Age</label>
+				{form2['age']}
+			</div>
+			<div class="mb-3 col-6">
+				<label for="sex-edit" class="form-label">Sex</label>
+				{form2['sex']}
+			</div>
+			<div class="mb-3 col-12">
+				<label for="salutation-edit" class="form-label">Salutation</label>
+				{form2['salutation']}
+			</div>
+			<div class="mb-3 col-12">
+				<label for="dept-edit" class="form-label">Department</label>
+				{form2['department']}
+			</div>
+			<div class="mb-3 col-6">
+				{form2['health']}
+				<label for="health-edit" class="form-check-label">Health</label>
+			</div>
+		'''
+
+		return JsonResponse(data, safe=False)
+
+	def post(self, request, id):
+		user_obj = User.objects.get(id=id)
+		profile_obj = ProfileUser.objects.get(user_id=id)
+		form1 = UpdateUserForm(request.POST, instance=user_obj)
+		form2 = ProfileForm(request.POST, instance=profile_obj)
+		if form1.is_valid() and form2.is_valid():
+			form1.save()
+			form2.save()
 		else:
-			dept = profile_obj.department.name
-		data = {'username': user_obj.username, 'name': profile_obj.name, 'email': user_obj.email,
-				'mobile': profile_obj.mobile, 'age': profile_obj.age, 'sex': profile_obj.sex, 'salutation': profile_obj.salutation,
-				'health': str(profile_obj.health), 'id': user_obj.id, 'depts': depts, 'dept': dept}
-		return JsonResponse(data)
-
-	def post(self, request):
-		id_1 = request.POST.get('id')
-		username = request.POST.get('username')
-		name = request.POST.get('name')
-		email = request.POST.get('email')
-		mobile = request.POST.get('mobile')
-		age = request.POST.get('age')
-		sex = request.POST.get('sex')
-		salutation = request.POST.get('salutation')
-		dept = Department.objects.get(name=request.POST.get('dept'))
-		if request.POST.get('health') == "True":
-			health = True
-		else:
-			health = False
-
-		user_obj = User.objects.get(id=id_1)
-		user_obj.username = username
-		user_obj.email = email
-
-		profile_obj = ProfileUser.objects.get(user_id=id_1)
-		profile_obj.mobile = mobile
-		profile_obj.age = int(age)
-		profile_obj.sex = sex
-		profile_obj.salutation = salutation
-		profile_obj.health = health
-		profile_obj.name = name
-		profile_obj.department = dept
-
-		user_obj.save()
-		profile_obj.save()
+			errors = {**json.loads(form1.errors.as_json()), **json.loads(form2.errors.as_json())}
+			data = {'errors': errors, 'success': False}
+			return JsonResponse(data)
 
 		#Sents updated data to js to render it
 		users_obj = ProfileUser.objects.all()
@@ -171,7 +175,7 @@ class UsersEdit(View):
 				'mobile': i.mobile, 'age': i.age, 'sex': i.sex, 'salutation': i.salutation,
 				'health': health, 'id': user_obj_1.id, 'dept': dept}
 			users.append(user_1)
-		data = {'users': users}
+		data = {'users': users, 'success': True}
 		return JsonResponse(data)
 
 #Renders programme data
@@ -192,17 +196,20 @@ def RenderProgrammeData():
 class ProgrammesView(View):
 	template = 'programmes.html'
 	def get(self, request):
-		context = {'programmes': RenderProgrammeData(), 'depts': Department.objects.values_list('name', flat=True)}
+		form = ProgrammeForm()
+		context = {'programmes': RenderProgrammeData(), 'depts': Department.objects.values_list('name', flat=True),
+			'form': form}
 		return render(request, self.template, context)
 
 	def post(self, request):
-		name = request.POST.get('name');
-		description = request.POST.get('description');
-
-		programme = Programme(name=name, description=description)
-		programme.save()
+		form = ProgrammeForm(request.POST)
+		if form.is_valid():
+			form.save()
+		else:
+			data = {'errors': form.errors.as_json(), 'success': False}
+			return JsonResponse(data)
 		#Sents updated data to js to render it
-		data = {'programmes': RenderProgrammeData()}
+		data = {'programmes': RenderProgrammeData(), 'success': True}
 		return JsonResponse(data, safe=False)
 
 #ProgrammesDelete
@@ -219,30 +226,35 @@ class ProgrammesDelete(View):
 #self.get() - Gets programme data to fill the modal form(request sent through ajax)
 #self.post() - Updates programme data(request sent through ajax)
 class ProgrammesEdit(View):
-	def get(self, request):
-		id_1 = request.GET.get('id')
-		pgm = Programme.objects.get(id=id_1)
-		if pgm.department == None:
-			dept = ""
-		else:
-			dept = pgm.department.name
-		depts = list(Department.objects.values_list('name', flat=True))
-		data = {'id': pgm.id, 'name': pgm.name, 'description': pgm.description, 
-			'dept': dept, 'depts': depts}
-		return JsonResponse(data)
+	def get(self, request, id):
+		pgm_obj = Programme.objects.get(id=id)
+		form = ProgrammeForm(instance=pgm_obj)
+		data = f'''
+			<div class="mb-3 col-12">
+			  <label for="name" class="form-label">Programme Name</label>
+			  {form["name"]}
+			</div>
+			<div class="mb-3 col-12">
+				<label for="dept-edit" class="form-label">Department</label>
+				{form["department"]}
+			</div>
+			<div class="form-group mb-3">
+			  <label for="description">Description</label>
+			  {form["description"]}
+			</div>
+		'''
+		return JsonResponse(data, safe=False)
 
-	def post(self, request):
-		id_2 = request.POST.get('id')
-		name = request.POST.get('name')
-		description = request.POST.get('description')
-		dept = Department.objects.get(name=request.POST.get('dept'))
-		programme = Programme.objects.get(id=id_2)
-		programme.name = name
-		programme.description = description
-		programme.department = dept
-		programme.save()
+	def post(self, request, id):
+		pgm_obj = Programme.objects.get(id=id)
+		form = ProgrammeForm(request.POST, instance=pgm_obj)
+		if form.is_valid():
+			form.save()
+		else:
+			data = {'errors': form.errors.as_json(), 'success': False}
+			return JsonResponse(data)
 		#Sents updated data to js to render it
-		data = {'programmes': RenderProgrammeData()}
+		data = {'programmes': RenderProgrammeData(), 'success':True}
 		return JsonResponse(data, safe=False)
 
 
@@ -252,16 +264,18 @@ class ProgrammesEdit(View):
 class DepartmentsView(View):
 	template = 'departments.html'
 	def get(self, request):
-		return render(request, self.template)
+		form = DepartmentForm()
+		return render(request, self.template, {'form':form})
 
 	def post(self, request):
-		name = request.POST.get('name');
-		description = request.POST.get('description');
+		form = DepartmentForm(request.POST)
+		if form.is_valid():
+			form.save()
+		else:
+			data = {'errors': form.errors.as_json(), 'success': False}
+			return JsonResponse(data)
 
-		department = Department(name=name, description=description)
-		department.save()
-
-		return HttpResponse('Department saved successfully!')
+		return JsonResponse({'success':True})
 
 #DownloadFileUser
 #self.get() - Downloads the excel template for uploading users with department

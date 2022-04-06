@@ -14,7 +14,7 @@ function render_user_data_to_table(response){
 	        <td>${user.sex}</td>
 	        <td>${user.health}</td>
 	        <td class="dept-table">${user.dept}</td>
-	        <td><a href="/user-edit/" class="edit-users" data-id="${user.id}"><i class="bi bi-pencil-square"></i></a></td>
+	        <td><a href="/user-edit/${user.id}" class="edit-users"><i class="bi bi-pencil-square"></i></a></td>
 	        <td><a href="/user-delete/${user.id}" class="delete-users"><i class="bi bi-trash-fill"></i></a></td>
 		</tr>`
 		$('#table-body').append($(element));
@@ -46,48 +46,27 @@ $(document).ready(function(){
 	$('#add-users-form').submit(function(e){
 		e.preventDefault()
 		const url = $(this).attr('action');
-		const csrf_token = $('#add-users-form input[name="csrfmiddlewaretoken"]').val();
-		const username = $('#username').val();
-		const name = $('#name').val();
-		const email = $('#email').val();
-		const mobile = $('#mobile').val();
-		const age = $('#age').val();
-		const sex = $('#sex').val();
-		const salutation = $('#salutation').val();
-		const health = $('#health').val();
-		const password1 = $('#password1').val();
-		const password2 = $('#password2').val();
-		const dept = $('#dept').val()
-		// if (!(Number.isInteger(Number(mobile)) && mobile.length == 10)) {
-		// 	alert("Mobile number is not valid!");
-		// } else if (!(Number.isInteger(Number(age)) && Number(age) > 0)) {
-		// 	alert("Age is not valid!")
-		// } else if (password1 !== password2) {
-		// 	alert("Passwords don't match!")
-		// } else {
-		var form1 = new FormData();
-		form1.append('username', username);
-		form1.append('email', email);
-		form1.append('password1', password1);
-		form1.append('password2', password2);
-		var form2 = new FormData();
-		form2.append('name', name);
-		form2.append('mobile', mobile);
-		form2.append('age', age);
-		form2.append('sex', sex);
-		form2.append('salutation', salutation);
-		form2.append('health', health);
-		form2.append('department', dept);
-		data = {'form1': form1, 'form2': form2, 'csrfmiddlewaretoken': csrf_token}
+		data = $(this).serialize();
 		$.ajax({
 			url: url,
 			type: 'post',
 			data: data,
-			processData: false,
 			success: function(response){
-				alert("User has been saved successfully!");
-				$('#add-users-form').trigger("reset");
-				render_user_data_to_table(response);
+				$('#messageLabel').empty();
+				$('#message-modal .modal-body').empty();
+				if (response.success) {
+					$('#messageLabel').text('Success!');
+					$('#message-modal .modal-body').text("User has been saved successfully!");
+					$('#add-users-form').trigger("reset");
+					render_user_data_to_table(response);
+				} else {
+					$('#messageLabel').text('Error!');
+					for (let error in response.errors){
+						message = '<p>' + response.errors[error][0]['message'] + '</p>'
+						$('#message-modal .modal-body').append($(message));
+					}
+				}
+				$('#message-modal').modal('show');
 			}
 		});
 	});
@@ -102,8 +81,19 @@ $(document).ready(function(){
 				url: url,
 				type: 'get',
 				success: function(response){
-					alert("User has been deleted");
+					$('#messageLabel').empty();
+					$('#message-modal .modal-body').empty();
+					$('#messageLabel').text('Success!');
+					$('#message-modal .modal-body').text("User has been deleted successfully!");
+					$('#message-modal').modal('show');
 					render_user_data_to_table(response);
+				},
+				error: function(){
+					$('#messageLabel').empty();
+					$('#message-modal .modal-body').empty();
+					$('#messageLabel').text('Error!');
+					$('#message-modal .modal-body').text("An error occured please try again later!");
+					$('#message-modal').modal('show');
 				}
 			});
 		};
@@ -115,31 +105,14 @@ $(document).ready(function(){
 	$(document).on('click', '.edit-users', function(e){
 		e.preventDefault()
 		const url = $(this).attr('href');
-		const id = $(this).data('id');
 		$.ajax({
 			url: url,
-			data: {'id': id},
 			type: 'get',
 			success: function(response){
 				$('#edit-user-modal').modal('show');
 				$('#edit-user-form').attr('action', url);
-				$('#edit-user-form input[name="edit-id"]').val(response.id);
-				$('#edit-user-form input[id="username-edit"]').val(response.username);
-				$('#edit-user-form input[id="name-edit"]').val(response.name);
-				$('#edit-user-form input[id="email-edit"]').val(response.email);
-				$('#edit-user-form input[id="mobile-edit"]').val(response.mobile);
-				$('#edit-user-form select[id="health-edit"]').val(response.health);
-				$('#edit-user-form input[id="age-edit"]').val(response.age);
-				$('#edit-user-form select[id="sex-edit"]').val(response.sex);
-				$('#edit-user-form select[id="salutation-edit"]').val(response.salutation);
-				$('#edit-user-form select[id="dept-edit"]').empty();
-				for (let i of response.depts){
-					let elem = `<option value="${i}">${i}</option>`;
-					$('#edit-user-form select[id="dept-edit"]').append($(elem));
-				}
-				if (response.dept!=""){
-					$('#edit-user-form select[id="dept-edit"]').val(response.dept);
-				}
+				$('#edit-user-modal .modal-body').empty();
+				$('#edit-user-modal .modal-body').append(response);
 			}
 		});
 	});
@@ -149,36 +122,30 @@ $(document).ready(function(){
 	$('#edit-user-form').submit(function(e) {
 		e.preventDefault()
 		const url = $(this).attr('action');
-		const id = $('#edit-user-form input[name="edit-id"]').val();
-		const csrf_token = $('#edit-user-form input[name="csrfmiddlewaretoken"]').val();
-		const username = $('#username-edit').val();
-		const name = $('#name-edit').val();
-		const email = $('#email-edit').val();
-		const mobile = $('#mobile-edit').val();
-		const age = $('#age-edit').val();
-		const sex = $('#sex-edit').val();
-		const salutation = $('#salutation-edit').val();
-		const health = $('#health-edit').val();
-		const dept = $('#dept-edit').val();
-		if (!(Number.isInteger(Number(mobile)) && mobile.length == 10)) {
-			alert("Mobile number is not valid!");
-		} else if (!(Number.isInteger(Number(age)) && Number(age) > 0)) {
-			alert("Age is not valid!")
-		} else {
-			$.ajax({
-				url: url,
-				type: 'post',
-				data: {'csrfmiddlewaretoken': csrf_token, 'username': username, 'name': name,
-					'email': email, 'mobile': mobile, 'age': age, 'sex': sex, 'salutation': salutation,
-					'health': health, 'id': id, 'dept': dept},
-				success: function(response){
-					alert("Changes have been saved!");
-					$('#edit-user-form').trigger("reset");
-					$('#edit-user-modal').modal('hide');
+		data = $(this).serialize();
+		$.ajax({
+			url: url,
+			type: 'post',
+			data: data,
+			success: function(response){
+				$('#messageLabel').empty();
+				$('#message-modal .modal-body').empty();
+				if (response.success) {
+					$('#messageLabel').text('Success!');
+					$('#message-modal .modal-body').text("User has been updated successfully!");
 					render_user_data_to_table(response);
+				} else {
+					$('#messageLabel').text('Error!');
+					for (let error in response.errors){
+						message = '<p>' + response.errors[error][0]['message'] + '</p>'
+						$('#message-modal .modal-body').append($(message));
+					}
 				}
-			});
-		}
+				$('#edit-user-modal .modal-body').empty();
+				$('#edit-user-modal').modal('hide');
+				$('#message-modal').modal('show');
+			}
+		});
 	});
 
 	// Event is triggered when we type in search 
@@ -200,17 +167,27 @@ $(document).ready(function(){
 	$('#add-programmes-form').submit(function(e){
 		e.preventDefault()
 		const url = $(this).attr('action');
-		const csrf_token = $('#add-programmes-form input[name="csrfmiddlewaretoken"]').val();
-		const name = $('#name').val();
-		const description = $('#description').val();
+		const data = $(this).serialize()
 		$.ajax({
 			url: url,
 			type: 'post',
-			data: {'csrfmiddlewaretoken': csrf_token, 'name': name, 'description': description},
+			data: data,
 			success: function(response){
-				alert("Programme has been saved successfully!");
-				$('#add-programmes-form').trigger("reset");
-				render_programme_data_to_table(response);
+				$('#messageLabel').empty();
+				$('#message-modal .modal-body').empty();
+				if (response.success) {
+					$('#messageLabel').text('Success!');
+					$('#message-modal .modal-body').text("Programme has been saved successfully!");
+					$('#add-users-form').trigger("reset");
+					render_programme_data_to_table(response);
+				} else {
+					$('#messageLabel').text('Error!');
+					for (let error in response.errors){
+						message = '<p>' + response.errors[error][0]['message'] + '</p>'
+						$('#message-modal .modal-body').append($(message));
+					}
+				}
+				$('#message-modal').modal('show');
 			}
 		});
 	});
@@ -225,8 +202,19 @@ $(document).ready(function(){
 				url: url,
 				type: 'get',
 				success: function(response){
-					alert("Programme has been deleted");
+					$('#messageLabel').empty();
+					$('#message-modal .modal-body').empty();
+					$('#messageLabel').text('Success!');
+					$('#message-modal .modal-body').text("Programme has been deleted successfully!");
+					$('#message-modal').modal('show');
 					render_programme_data_to_table(response);
+				},
+				error: function(){
+					$('#messageLabel').empty();
+					$('#message-modal .modal-body').empty();
+					$('#messageLabel').text('Error!');
+					$('#message-modal .modal-body').text("An error occured please try again later!");
+					$('#message-modal').modal('show');
 				}
 			});
 		};
@@ -238,25 +226,14 @@ $(document).ready(function(){
 	$(document).on('click', '.edit-programmes', function(e){
 		e.preventDefault()
 		const url = $(this).attr('href');
-		const id = $(this).data('id');
 		$.ajax({
 			url: url,
-			data: {'id': id},
 			type: 'get',
 			success: function(response){
 				$('#edit-programme-modal').modal('show');
 				$('#edit-programme-form').attr('action', url);
-				$('#edit-programme-form input[name="edit-programme-id"]').val(response.id);
-				$('#edit-programme-form textarea[id="description-edit"]').text(response.description);
-				$('#edit-programme-form input[id="name-edit"]').val(response.name);
-				$('#edit-programme-form select[id="dept-edit"]').empty();
-				for (let i of response.depts){
-					let elem = `<option value="${i}">${i}</option>`;
-					$('#edit-programme-form select[id="dept-edit"]').append($(elem));
-				}
-				if (response.dept!=""){
-					$('#edit-programme-form select[id="dept-edit"]').val(response.dept);
-				}
+				$('#edit-user-modal .modal-body').empty();
+				$('#edit-programme-modal .modal-body').append(response);
 			}
 		});
 	});
@@ -266,21 +243,28 @@ $(document).ready(function(){
 	$('#edit-programme-form').submit(function(e) {
 		e.preventDefault()
 		const url = $(this).attr('action');
-		const id = $('#edit-programme-form input[name="edit-programme-id"]').val();
-		const csrf_token = $('#edit-programme-form input[name="csrfmiddlewaretoken"]').val();
-		const name = $('#name-edit').val();
-		const description = $('#description-edit').val();
-		const dept = $('#dept-edit').val();
+		const data = $(this).serialize()
 		$.ajax({
 			url: url,
 			type: 'post',
-			data: {'csrfmiddlewaretoken': csrf_token, 'name': name, 
-				'description': description, 'id': id, 'dept': dept},
+			data: data,
 			success: function(response){
-				alert("Changes have been saved!");
-				$('#edit-programme-form').trigger("reset");
+				$('#messageLabel').empty();
+				$('#message-modal .modal-body').empty();
+				if (response.success) {
+					$('#messageLabel').text('Success!');
+					$('#message-modal .modal-body').text("Programme has been updated successfully!");
+					render_programme_data_to_table(response);
+				} else {
+					$('#messageLabel').text('Error!');
+					for (let error in response.errors){
+						message = '<p>' + response.errors[error][0]['message'] + '</p>'
+						$('#message-modal .modal-body').append($(message));
+					}
+				}
+				$('#edit-programme-modal .modal-body').empty();
 				$('#edit-programme-modal').modal('hide');
-				render_programme_data_to_table(response);
+				$('#message-modal').modal('show');
 			}
 		});
 	});
@@ -323,16 +307,26 @@ $(document).ready(function(){
 	$('#add-departments-form').submit(function(e){
 		e.preventDefault()
 		const url = $(this).attr('action');
-		const csrf_token = $('#add-departments-form input[name="csrfmiddlewaretoken"]').val();
-		const name = $('#name').val();
-		const description = $('#description').val();
+		const data = $(this).serialize();
 		$.ajax({
 			url: url,
 			type: 'post',
-			data: {'csrfmiddlewaretoken': csrf_token, 'name': name, 'description': description},
+			data: data,
 			success: function(response){
-				alert(response);
-				$('#add-departments-form').trigger('reset');
+				$('#messageLabel').empty();
+				$('#message-modal .modal-body').empty();
+				if (response.success) {
+					$('#messageLabel').text('Success!');
+					$('#message-modal .modal-body').text("Department has been saved successfully!");
+					$('#add-departments-form').trigger('reset');
+				} else {
+					$('#messageLabel').text('Error!');
+					for (let error in response.errors){
+						message = '<p>' + response.errors[error][0]['message'] + '</p>'
+						$('#message-modal .modal-body').append($(message));
+					}
+				}
+				$('#message-modal').modal('show');
 			}
 		});
 	});

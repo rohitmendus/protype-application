@@ -9,11 +9,11 @@
 	  {% csrf_token %}
 	  <div class="mb-3 col-6">
 	    <label for="name" class="form-label">Department Name</label>
-	    <input type="text" class="form-control" id="name" required>
+	    {{form.name}}
 	  </div>
 	   <div class="form-group mb-3">
 	    <label for="description">Description</label>
-	    <textarea class="form-control" id="description" rows="3" required></textarea>
+	    {{form.description}}
 	  </div>
 	  <div class="mb-3 col-12 d-flex justify-content-center">
 	  	<button type="submit" class="btn btn-primary px-5">Submit</button>

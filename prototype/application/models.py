@@ -14,16 +14,16 @@ class Department(models.Model):
 class ProfileUser(models.Model):
 	phoneNumberRegex = RegexValidator(regex = r"^\+?1?\d{8,15}$")
 	sex_type = (
-		(1, "Male"),
-		(2, "Female"),
-		(3, "Unspecified"),
+		("Male", "Male"),
+		("Female", "Female"),
+		("Unspecified", "Unspecified"),
 	)
 	salutations = (
-		(1, "Dr"),
-		(2, "Mr"),
-		(3, "Ms"),
-		(4, "Prof"),
-		(5, "Rev"),
+		("Dr", "Dr"),
+		("Mr", "Mr"),
+		("Ms", "Ms"),
+		("Prof", "Prof"),
+		("Rev", "Rev"),
 	)
 	status_type = (
 		(1, "Active"),
@@ -34,7 +34,8 @@ class ProfileUser(models.Model):
 	)   
 
 	name = models.CharField(max_length=200)
-	mobile = models.CharField(validators = [phoneNumberRegex], max_length=10, unique = True)
+	mobile = models.CharField(validators = [phoneNumberRegex], max_length=10, unique = True, error_messages={'unique': 'The phone number you entered has already been registered!'})
+
 	age = models.IntegerField()
 	sex = models.CharField(choices=sex_type, max_length=15)
 	salutation = models.CharField(choices=salutations, max_length=15)

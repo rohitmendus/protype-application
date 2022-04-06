@@ -9,11 +9,15 @@
 	  {% csrf_token %}
 	  <div class="mb-3 col-6">
 	    <label for="name" class="form-label">Programme Name</label>
-	    <input type="text" class="form-control" id="name" required>
+	    {{form.name}}
+	  </div>
+	  <div class="mb-3 col-6">
+	  	<label for="dept" class="form-label">Department</label>
+		{{form.department}}
 	  </div>
 	   <div class="form-group mb-3">
 	    <label for="description">Description</label>
-	    <textarea class="form-control" id="description" rows="3" required></textarea>
+	    {{form.description}}
 	  </div>
 	  <div class="mb-3 col-12 d-flex justify-content-center">
 	  	<button type="submit" class="btn btn-primary px-5">Submit</button>
@@ -61,7 +65,7 @@
 	      <td class="name-table">{{programme.name}}</td>
 	      <td>{{programme.description}}</td>
 	      <td class="dept-table">{{programme.dept}}</td>
-	      <td><a class="edit-programmes" href="{% url 'programme-edit' %}" data-id="{{programme.id}}"><i class="bi bi-pencil-square"></i></a></td>
+	      <td><a class="edit-programmes" href="{% url 'programme-edit' programme.id %}"><i class="bi bi-pencil-square"></i></a></td>
 	      <td><a href="{% url 'programme-delete' programme.id %}" class="delete-programmes"><i class="bi bi-trash-fill"></i></a></td>
 	    </tr>
 	    {% endfor %}
@@ -73,25 +77,12 @@
 	    <div class="modal-content">
 	    	<form method="post" id="edit-programme-form">
 	    	  {% csrf_token %}
-	    	  <input type="hidden" name="edit-programme-id" value="">
 		      <div class="modal-header">
 		        <h5 class="modal-title" id="edit-programme-title">Edit User</h5>
 		        <button type="button" class="btn-close" data-dismiss="modal" aria-label="Close" onclick="$('#edit-programme-modal').modal('hide');">
 		        </button>
 		      </div>
 		      <div class="modal-body row">
-		        <div class="mb-3 col-6">
-				  <label for="name" class="form-label">Programme Name</label>
-				  <input type="text" class="form-control" id="name-edit" required>
-				</div>
-				<div class="form-group mb-3">
-				  <label for="description">Description</label>
-				  <textarea class="form-control" id="description-edit" rows="3" required></textarea>
-				</div>
-				<div class="mb-3 col-12">
-					<label for="dept-edit" class="form-label">Department</label>
-					<select class="form-select" id="dept-edit"></select>
-				</div>
 		      </div>
 		      <div class="modal-footer">
 		        <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="$('#edit-programme-modal').modal('hide');">Close</button>
