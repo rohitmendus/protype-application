@@ -1,3 +1,18 @@
 .add {
 	margin-top: 30px;
 }
+
+.login {
+	margin-top: 50px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+.login .row {
+	border-radius: 5%;
+	padding: 20px;
+	width: 400px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}

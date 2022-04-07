@@ -1,16 +1,50 @@
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponse
+from django.contrib import messages
+from django.contrib.auth import password_validation
+from django.core.validators import validate_email, RegexValidator
+from django.core.exceptions import ValidationError
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth import login, logout
 from django.views import View
 from .models import *
 from .forms import *
+from .mixins import SuperUserRequiredMixin
 from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
 import mimetypes, os, openpyxl, json
 
+class LoginView(View):
+	template = "login.html"
+	def get(self, request):
+		form = AuthenticationForm()
+		return render(request, self.template, {'form': form})
+
+	def post(self, request):
+		form = AuthenticationForm(request, data=request.POST)
+		if form.is_valid():
+			user = form.get_user()
+			if user.is_superuser:
+				login(request, user)
+				return redirect('/users')
+			else:
+				print('Debug1')
+				messages.error(request, 'User is not an admin!')
+				return redirect('/login')
+		else:
+			print('Debug2')
+			messages.error(request, 'Incorrect username or password!.')
+			return redirect('/login')
+
+class LogOutView(View):
+	def get(self, request):
+		logout(request)
+		return redirect("/login")
+
 #UsersView
 #self.get() - Renders the template and sents users' details
 #self.post() - Creates new users(request sent through ajax)
-class UsersView(View):
+class UsersView(SuperUserRequiredMixin, View):
 	template = 'users.html'
 	def get(self, request):
 		users_obj = ProfileUser.objects.all()
@@ -70,7 +104,7 @@ class UsersView(View):
 
 #UsersDelete
 #self.get() - Deletes the user(request sent through ajax)
-class UsersDelete(View):
+class UsersDelete(SuperUserRequiredMixin, View):
 	def get(self, request, id):
 		#Deleting user
 		user = User.objects.get(id=id)
@@ -98,7 +132,7 @@ class UsersDelete(View):
 #UsersEdit
 #self.get() - Gets user data to fill the modal form(request sent through ajax)
 #self.post() - Updates user data(request sent through ajax)
-class UsersEdit(View):
+class UsersEdit(SuperUserRequiredMixin, View):
 	def get(self, request, id):
 		user_obj = User.objects.get(id=id)
 		profile_obj = ProfileUser.objects.get(user_id=id)
@@ -193,7 +227,7 @@ def RenderProgrammeData():
 #ProgrammesView
 #self.get() - Renders the template and sents programmes' details
 #self.post() - Creates new programmes(request sent through ajax)
-class ProgrammesView(View):
+class ProgrammesView(SuperUserRequiredMixin, View):
 	template = 'programmes.html'
 	def get(self, request):
 		form = ProgrammeForm()
@@ -214,7 +248,7 @@ class ProgrammesView(View):
 
 #ProgrammesDelete
 #self.get() - Deletes the programme(request sent through ajax)
-class ProgrammesDelete(View):
+class ProgrammesDelete(SuperUserRequiredMixin, View):
 	def get(self, request, id):
 		programme = Programme.objects.get(id=id)
 		programme.delete()
@@ -225,7 +259,7 @@ class ProgrammesDelete(View):
 #ProgrammesEdit
 #self.get() - Gets programme data to fill the modal form(request sent through ajax)
 #self.post() - Updates programme data(request sent through ajax)
-class ProgrammesEdit(View):
+class ProgrammesEdit(SuperUserRequiredMixin, View):
 	def get(self, request, id):
 		pgm_obj = Programme.objects.get(id=id)
 		form = ProgrammeForm(instance=pgm_obj)
@@ -261,7 +295,7 @@ class ProgrammesEdit(View):
 #DepartmentsView
 #self.get() - Renders the template
 #self.post() - Creates new department(request sent through ajax)
-class DepartmentsView(View):
+class DepartmentsView(SuperUserRequiredMixin, View):
 	template = 'departments.html'
 	def get(self, request):
 		form = DepartmentForm()
@@ -279,7 +313,7 @@ class DepartmentsView(View):
 
 #DownloadFileUser
 #self.get() - Downloads the excel template for uploading users with department
-class DownloadFileUser(View):
+class DownloadFileUser(SuperUserRequiredMixin, View):
 	def get(self, request):
 		# Getting file path
 		filename= "user_department_template.xlsx"
@@ -293,31 +327,28 @@ class DownloadFileUser(View):
 		#Removing existing data downs if any
 		toRemove = []
 		for validation in ws.data_validations.dataValidation:
-			if validation.__contains__('B2'):
+			if validation.__contains__('K2'):
 				toRemove.append(validation)
 		for rmValidation in toRemove:
 			ws.data_validations.dataValidation.remove(rmValidation)
-
-		#Removing user names from existing template
-		for x in range(2, 102):
-			ws['A'+str(x)].value=""
 
 		#Adding new drop downs
 		department_names = Department.objects.values_list('name', flat=True)
 		dlist1 = ", ".join(department_names)
 		dlist1 = '"' + dlist1 + '"'
-		dv = openpyxl.worksheet.datavalidation.DataValidation(type="list", formula1=dlist1)
-		ws.add_data_validation(dv)
-		dv.add('B2:B100')
+		dv_dept = openpyxl.worksheet.datavalidation.DataValidation(type="list", formula1=dlist1, allow_blank=True)
+		dv_sex = openpyxl.worksheet.datavalidation.DataValidation(type="list", formula1='"Male,Female,Unspecified"')
+		dv_salutation = openpyxl.worksheet.datavalidation.DataValidation(type="list", formula1='"Dr,Mr,Ms,Prof,Rev"')
+		dv_health = openpyxl.worksheet.datavalidation.DataValidation(type="list", formula1='"Fine,Not Fine"')
+		ws.add_data_validation(dv_dept)
+		dv_dept.add('K2:K100')
+		ws.add_data_validation(dv_sex)
+		dv_sex.add('F2:F100')
+		ws.add_data_validation(dv_salutation)
+		dv_salutation.add('G2:G100')
+		ws.add_data_validation(dv_health)
+		dv_health.add('H2:H100')
 
-		#Adding user names
-		users = ProfileUser.objects.values_list('name', 'department')
-		counter = 2
-		for user in users:
-			ws['A'+str(counter)].value = user[0]
-			if user[1] != None:
-				ws['B'+str(counter)].value = Department.objects.get(id=user[1]).name
-			counter += 1
 		wb.save(filepath)
 
 		#Sending the file as response
@@ -328,35 +359,71 @@ class DownloadFileUser(View):
 		return response
 
 #Uploads the user and department mapping to the db from the uploaded excel file
-class UploadUserDeptView(View):
+class UploadUserDeptView(SuperUserRequiredMixin, View):
 	def post(self, request):
 		file = request.FILES.get('user_dept_file')
 
-		data = []
+		errors= []
 		wb = openpyxl.load_workbook(file)
 		ws = wb.active
-		count = ProfileUser.objects.all().count()
-		for y in range(2, count+2):
-			user_name = ws['A'+str(y)].value
-			department_name = ws['B'+str(y)].value
-			if user_name != None and department_name != None:	
-				data_set = {'user_name':user_name, 'department_name': department_name}
-				data.append(data_set)
-		
-		print(data)
-		for i in data:
-			user = ProfileUser.objects.get(name=i['user_name'])
-			department = Department.objects.get(name=i['department_name'])
-			if user != None and department != None:
-				user.department = department
-				user.save()
+		for x in range(2, 101):
+			username = ws['A'+str(x)].value
+			name = ws['B'+str(x)].value
+			email = ws['C'+str(x)].value
+			mobile = ws['D'+str(x)].value
+			age = ws['E'+str(x)].value
+			sex = ws['F'+str(x)].value
+			salutation = ws['G'+str(x)].value
+			dept_name = ws['K'+str(x)].value
+			if ws['H'+str(x)].value == "Fine":
+				health = True
 			else:
-				return HttpResponse("An error occured!")
+				health = False
+			password1 = str(ws['I'+str(x)].value)
+			password2 = str(ws['J'+str(x)].value)
+			error = []
+			if None not in [username, name, email, mobile, age, sex, salutation, health, password1, password2]:
+				if '' in [username, name, email, mobile, age, sex, salutation, health, password1, password2]:
+					error.append('Some fields are empty')
+				if password1 != password2:
+					error.append('Passwords are not matching!')
+				try:
+					validate_email(email)
+				except ValidationError as e:
+					error.append("Email is not valid!")
+				try:
+					password_validation.validate_password(password1)
+				except ValidationError as e:
+					error.append('Password is not valid!')
+				try:
+					validator = RegexValidator(regex = r"^\+?1?\d{8,15}$")
+					validator(mobile)
+				except ValidationError as e:
+					error.append('Phone number is not valid!')
+				if ProfileUser.objects.filter(mobile=mobile).exists():
+					error.append('The phone number you entered has already been registered!')
+				if str(age).isnumeric() == False:
+					error.append('The age is not valid!')
+				if len(error) == 0:
+					try:
+						dept = Department.objects.get(name=dept_name)
+					except:
+						dept = None
+					user = User.objects.create_user(username=username, email=email, password=password1)
+					if dept != None:
+						profile = ProfileUser.objects.create(name=name,mobile=mobile,age=age,
+						sex=sex,salutation=salutation,health=health,department=dept, user=user)
+					else:
+						profile = ProfileUser.objects.create(name=name,mobile=mobile,age=age,
+						sex=sex,salutation=salutation,health=health, user=user)
+				else:
+					errors.append(error)
+		print(errors)
 		return redirect("/departments")
 
 #DownloadFileProgramme
 #self.get() - Downloads the excel template for uploading programmes with department
-class DownloadFileProgramme(View):
+class DownloadFileProgramme(SuperUserRequiredMixin, View):
 	def get(self, request):
 		# Getting file path
 		filename= "programme_dept_template.xlsx"
@@ -370,31 +437,18 @@ class DownloadFileProgramme(View):
 		#Removing existing data downs if any
 		toRemove = []
 		for validation in ws1.data_validations.dataValidation:
-			if validation.__contains__('B2'):
+			if validation.__contains__('C2'):
 				toRemove.append(validation)
 		for rmValidation in toRemove:
 			ws1.data_validations.dataValidation.remove(rmValidation)
-
-		#Removing programme names from existing template
-		for x in range(2, 102):
-			ws1['A'+str(x)].value=""
 
 		#Adding new drop downs
 		department_names = Department.objects.values_list('name', flat=True)
 		dlist1 = ", ".join(department_names)
 		dlist1 = '"' + dlist1 + '"'
-		dv = openpyxl.worksheet.datavalidation.DataValidation(type="list", formula1=dlist1)
+		dv = openpyxl.worksheet.datavalidation.DataValidation(type="list", formula1=dlist1, allow_blank=True)
 		ws1.add_data_validation(dv)
-		dv.add('B2:B100')
-
-		#Adding programme names
-		programmes = Programme.objects.values_list('name', 'department')
-		counter = 2
-		for pgm in programmes:
-			ws1['A'+str(counter)].value = pgm[0]
-			if pgm[1] != None:
-				ws1['B'+str(counter)].value = Department.objects.get(id=pgm[1]).name
-			counter += 1
+		dv.add('C2:C100')
 		wb1.save(filepath)
 
 		#Sending the file as response
@@ -405,28 +459,34 @@ class DownloadFileProgramme(View):
 		return response
 
 #Uploads the programme and department mapping to the db from the uploaded excel file
-class UploadProgrammeDeptView(View):
+class UploadProgrammeDeptView(SuperUserRequiredMixin, View):
 	def post(self, request):
 		file = request.FILES.get('pgm_dept_file')
 
-		data = []
+		errors = []
 		wb1 = openpyxl.load_workbook(file)
 		ws1 = wb1.active
-		count = Programme.objects.all().count()
-		for y in range(2, count+2):
-			pgm_name = ws1['A'+str(y)].value
-			department_name = ws1['B'+str(y)].value
-			if pgm_name != None and department_name != None:	
-				data_set = {'pgm_name':pgm_name, 'department_name': department_name}
-				data.append(data_set)
-		
-		for i in data:
-			pgm = Programme.objects.get(name=i['pgm_name'])
-			department = Department.objects.get(name=i['department_name'])
-			if pgm != None and department != None:
-				pgm.department = department
-				pgm.save()
-			else:
-				return HttpResponse("An error occured!")
+		for x in range(2, 101):
+			error = []
+			name = ws1['A'+str(x)].value
+			description = ws1['B'+str(x)].value
+			dept_name = ws1['C'+str(x)].value
+			if None not in [name, description]:
+				if len(description) > 500:
+					error.append('Max length has exceeded for description')
+				if len(name) > 200:
+					error.append('Max length has exceeded for programme name')
+				if len(error) == 0:
+					try:
+						dept = Department.objects.get(name=dept_name)
+					except:
+						dept = None
+					if dept != None:
+						pgm = Programme.objects.create(name=name, description=description, department=dept)
+					else:
+						pgm = Programme.objects.create(name=name, description=description)
+				else:
+					errors.append(error)
+		print(errors)
 		return redirect("/departments")
 
