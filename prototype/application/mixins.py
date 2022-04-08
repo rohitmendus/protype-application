@@ -1,4 +1,7 @@
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-class SuperUserRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+from django.contrib.auth.mixins import LoginRequiredMixin
+class AdminRequiredMixin(LoginRequiredMixin):
     def test_func(self):
-        return self.request.user.is_superuser
+        try:
+        	return self.request.user.roles.filter(role="Admin").exists()
+        except:
+        	return False

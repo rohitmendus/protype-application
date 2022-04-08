@@ -1,0 +1,27 @@
+[
+  {
+    "model": "application.userrole",
+    "pk": 1,
+    "fields": {
+      "role": "Faculty",
+      "description": "Faculty is the default user."
+    }
+  },
+  {
+    "model": "application.userrole",
+    "pk": 2,
+    "fields": {
+      "role": "COE",
+      "description": "Controller of Examinations"
+    }
+  },
+  {
+    "model": "application.userrole",
+    "pk": 3,
+    "fields": {
+      "role": "Admin",
+      "description": "The admin can add and manage users, departments and programmes.",
+      "users": [1]
+    }
+  }
+]

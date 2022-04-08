@@ -9,11 +9,14 @@ from django.contrib.auth import login, logout
 from django.views import View
 from .models import *
 from .forms import *
-from .mixins import SuperUserRequiredMixin
+from .mixins import AdminRequiredMixin
 from django.contrib.auth.models import User
 from django.forms.models import model_to_dict
 import mimetypes, os, openpyxl, json
 
+#Admin User
+#username: admin
+#password: 12345
 class LoginView(View):
 	template = "login.html"
 	def get(self, request):
@@ -24,15 +27,13 @@ class LoginView(View):
 		form = AuthenticationForm(request, data=request.POST)
 		if form.is_valid():
 			user = form.get_user()
-			if user.is_superuser:
+			if user.roles.filter(role='Admin').exists():
 				login(request, user)
 				return redirect('/users')
 			else:
-				print('Debug1')
 				messages.error(request, 'User is not an admin!')
 				return redirect('/login')
 		else:
-			print('Debug2')
 			messages.error(request, 'Incorrect username or password!.')
 			return redirect('/login')
 
@@ -44,7 +45,8 @@ class LogOutView(View):
 #UsersView
 #self.get() - Renders the template and sents users' details
 #self.post() - Creates new users(request sent through ajax)
-class UsersView(SuperUserRequiredMixin, View):
+class UsersView(AdminRequiredMixin, View):
+	login_url = "/login/"
 	template = 'users.html'
 	def get(self, request):
 		users_obj = ProfileUser.objects.all()
@@ -65,6 +67,7 @@ class UsersView(SuperUserRequiredMixin, View):
 			users.append(user)
 		form2 = ProfileForm()
 		form1 = CreateUserForm()
+		print(request.user.roles.filter(role="Admin").exists())
 		context = {'users': users, 'depts': Department.objects.values_list('name', flat=True),
 			'form1': form1, 'form2': form2}
 		return render(request, self.template, context)
@@ -104,7 +107,8 @@ class UsersView(SuperUserRequiredMixin, View):
 
 #UsersDelete
 #self.get() - Deletes the user(request sent through ajax)
-class UsersDelete(SuperUserRequiredMixin, View):
+class UsersDelete(AdminRequiredMixin, View):
+	login_url = "/login/"
 	def get(self, request, id):
 		#Deleting user
 		user = User.objects.get(id=id)
@@ -132,12 +136,21 @@ class UsersDelete(SuperUserRequiredMixin, View):
 #UsersEdit
 #self.get() - Gets user data to fill the modal form(request sent through ajax)
 #self.post() - Updates user data(request sent through ajax)
-class UsersEdit(SuperUserRequiredMixin, View):
+class UsersEdit(AdminRequiredMixin, View):
+	login_url = "/login/"
 	def get(self, request, id):
 		user_obj = User.objects.get(id=id)
 		profile_obj = ProfileUser.objects.get(user_id=id)
 		form1 = UpdateUserForm(instance=user_obj)
 		form2 = ProfileForm(instance=profile_obj)
+		user_roles = UserRole.objects.values_list('role', flat=True)
+		user_roles_opts = ''
+		for user_role in user_roles:
+			if user_obj.roles.filter(role=user_role).exists():
+				elem = f'<option value="{user_role}" selected>{user_role}</option>'
+			else:
+				elem = f'<option value="{user_role}">{user_role}</option>'
+			user_roles_opts += elem
 		data = f'''
 			<div class="mb-3 col-6">
 				<label for="username-edit" class="form-label">Username</label>
@@ -171,6 +184,12 @@ class UsersEdit(SuperUserRequiredMixin, View):
 				<label for="dept-edit" class="form-label">Department</label>
 				{form2['department']}
 			</div>
+			<div class="mb-3 col-12">
+				<label for="user-roles" class="form-label">User Role</label>
+				<select name="user-roles" class="form-select" id="user-roles" multiple>
+					{user_roles_opts}
+				</select>
+			</div>
 			<div class="mb-3 col-6">
 				{form2['health']}
 				<label for="health-edit" class="form-check-label">Health</label>
@@ -184,9 +203,13 @@ class UsersEdit(SuperUserRequiredMixin, View):
 		profile_obj = ProfileUser.objects.get(user_id=id)
 		form1 = UpdateUserForm(request.POST, instance=user_obj)
 		form2 = ProfileForm(request.POST, instance=profile_obj)
+		roles = request.POST.getlist('user-roles')
 		if form1.is_valid() and form2.is_valid():
 			form1.save()
 			form2.save()
+			for role_name in roles:
+				role = UserRole.objects.get(role=role_name)
+				role.users.add(user_obj)
 		else:
 			errors = {**json.loads(form1.errors.as_json()), **json.loads(form2.errors.as_json())}
 			data = {'errors': errors, 'success': False}
@@ -227,7 +250,8 @@ def RenderProgrammeData():
 #ProgrammesView
 #self.get() - Renders the template and sents programmes' details
 #self.post() - Creates new programmes(request sent through ajax)
-class ProgrammesView(SuperUserRequiredMixin, View):
+class ProgrammesView(AdminRequiredMixin, View):
+	login_url = "/login/"
 	template = 'programmes.html'
 	def get(self, request):
 		form = ProgrammeForm()
@@ -248,7 +272,8 @@ class ProgrammesView(SuperUserRequiredMixin, View):
 
 #ProgrammesDelete
 #self.get() - Deletes the programme(request sent through ajax)
-class ProgrammesDelete(SuperUserRequiredMixin, View):
+class ProgrammesDelete(AdminRequiredMixin, View):
+	login_url = "/login/"
 	def get(self, request, id):
 		programme = Programme.objects.get(id=id)
 		programme.delete()
@@ -259,7 +284,8 @@ class ProgrammesDelete(SuperUserRequiredMixin, View):
 #ProgrammesEdit
 #self.get() - Gets programme data to fill the modal form(request sent through ajax)
 #self.post() - Updates programme data(request sent through ajax)
-class ProgrammesEdit(SuperUserRequiredMixin, View):
+class ProgrammesEdit(AdminRequiredMixin, View):
+	login_url = "/login/"
 	def get(self, request, id):
 		pgm_obj = Programme.objects.get(id=id)
 		form = ProgrammeForm(instance=pgm_obj)
@@ -295,7 +321,8 @@ class ProgrammesEdit(SuperUserRequiredMixin, View):
 #DepartmentsView
 #self.get() - Renders the template
 #self.post() - Creates new department(request sent through ajax)
-class DepartmentsView(SuperUserRequiredMixin, View):
+class DepartmentsView(AdminRequiredMixin, View):
+	login_url = "/login/"
 	template = 'departments.html'
 	def get(self, request):
 		form = DepartmentForm()
@@ -313,7 +340,8 @@ class DepartmentsView(SuperUserRequiredMixin, View):
 
 #DownloadFileUser
 #self.get() - Downloads the excel template for uploading users with department
-class DownloadFileUser(SuperUserRequiredMixin, View):
+class DownloadFileUser(AdminRequiredMixin, View):
+	login_url = "/login/"
 	def get(self, request):
 		# Getting file path
 		filename= "user_department_template.xlsx"
@@ -359,7 +387,8 @@ class DownloadFileUser(SuperUserRequiredMixin, View):
 		return response
 
 #Uploads the user and department mapping to the db from the uploaded excel file
-class UploadUserDeptView(SuperUserRequiredMixin, View):
+class UploadUserDeptView(AdminRequiredMixin, View):
+	login_url = "/login/"
 	def post(self, request):
 		file = request.FILES.get('user_dept_file')
 
@@ -423,7 +452,8 @@ class UploadUserDeptView(SuperUserRequiredMixin, View):
 
 #DownloadFileProgramme
 #self.get() - Downloads the excel template for uploading programmes with department
-class DownloadFileProgramme(SuperUserRequiredMixin, View):
+class DownloadFileProgramme(AdminRequiredMixin, View):
+	login_url = "/login/"
 	def get(self, request):
 		# Getting file path
 		filename= "programme_dept_template.xlsx"
@@ -459,7 +489,8 @@ class DownloadFileProgramme(SuperUserRequiredMixin, View):
 		return response
 
 #Uploads the programme and department mapping to the db from the uploaded excel file
-class UploadProgrammeDeptView(SuperUserRequiredMixin, View):
+class UploadProgrammeDeptView(AdminRequiredMixin, View):
+	login_url = "/login/"
 	def post(self, request):
 		file = request.FILES.get('pgm_dept_file')
 

@@ -49,4 +49,7 @@ class Programme(models.Model):
 	description = models.CharField(max_length=500)
 	department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name="programmes", blank=True, null=True)
 
-
+class UserRole(models.Model):
+	users = models.ManyToManyField(User, related_name="roles", blank=True)
+	role = models.CharField(max_length=200)
+	description = models.CharField(max_length=500, null=True)
