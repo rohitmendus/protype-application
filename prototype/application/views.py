@@ -67,7 +67,6 @@ class UsersView(AdminRequiredMixin, View):
 			users.append(user)
 		form2 = ProfileForm()
 		form1 = CreateUserForm()
-		print(request.user.roles.filter(role="Admin").exists())
 		context = {'users': users, 'depts': Department.objects.values_list('name', flat=True),
 			'form1': form1, 'form2': form2}
 		return render(request, self.template, context)
@@ -78,6 +77,7 @@ class UsersView(AdminRequiredMixin, View):
 		if form1.is_valid() and form2.is_valid():
 			user = form1.save()
 			profile = form2.save(commit=False)
+			UserRole.objects.get(role="Faculty").users.add(user)
 			profile.user = user
 			profile.save()
 		else:
@@ -210,6 +210,9 @@ class UsersEdit(AdminRequiredMixin, View):
 			for role_name in roles:
 				role = UserRole.objects.get(role=role_name)
 				role.users.add(user_obj)
+			for role_obj in user_obj.roles.all():
+				if role_obj.role not in roles:
+					role_obj.users.remove(user_obj)
 		else:
 			errors = {**json.loads(form1.errors.as_json()), **json.loads(form2.errors.as_json())}
 			data = {'errors': errors, 'success': False}
@@ -441,6 +444,7 @@ class UploadUserDeptView(AdminRequiredMixin, View):
 					except:
 						dept = None
 					user = User.objects.create_user(username=username, email=email, password=password1)
+					UserRole.objects.get(role="Faculty").users.add(user)
 					if dept != None:
 						profile = ProfileUser.objects.create(name=name,mobile=mobile,age=age,
 						sex=sex,salutation=salutation,health=health,department=dept, user=user)
