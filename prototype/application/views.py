@@ -350,26 +350,30 @@ class DownloadFileUser(AdminRequiredMixin, View):
 
 		# Loading the excel file
 		wb = openpyxl.load_workbook(filepath)
-		ws = wb.active
+		ws = wb['user_department']
+		ws_depts = wb['departments']
 
 		#Removing existing data downs if any
 		toRemove = []
 		for validation in ws.data_validations.dataValidation:
-			if validation.__contains__('K2'):
+			if validation.__contains__('J2'):
 				toRemove.append(validation)
 		for rmValidation in toRemove:
 			ws.data_validations.dataValidation.remove(rmValidation)
 
 		#Adding new drop downs
 		department_names = Department.objects.values_list('name', flat=True)
-		dlist1 = ", ".join(department_names)
-		dlist1 = '"' + dlist1 + '"'
-		dv_dept = openpyxl.worksheet.datavalidation.DataValidation(type="list", formula1=dlist1, allow_blank=True)
+		c = 1
+		for dept in department_names:
+			c += 1
+			ws_depts['A'+str(c)] = dept
+		depts_len = len(department_names)+1
+		dv_dept = openpyxl.worksheet.datavalidation.DataValidation(type="list", formula1="{0}!$A$2:$A${1}".format(openpyxl.utils.quote_sheetname('departments'), depts_len), allow_blank=True)
 		dv_sex = openpyxl.worksheet.datavalidation.DataValidation(type="list", formula1='"Male,Female,Unspecified"')
 		dv_salutation = openpyxl.worksheet.datavalidation.DataValidation(type="list", formula1='"Dr,Mr,Ms,Prof,Rev"')
 		dv_health = openpyxl.worksheet.datavalidation.DataValidation(type="list", formula1='"Fine,Not Fine"')
 		ws.add_data_validation(dv_dept)
-		dv_dept.add('K2:K100')
+		dv_dept.add('J2:J100')
 		ws.add_data_validation(dv_sex)
 		dv_sex.add('F2:F100')
 		ws.add_data_validation(dv_salutation)
@@ -377,6 +381,7 @@ class DownloadFileUser(AdminRequiredMixin, View):
 		ws.add_data_validation(dv_health)
 		dv_health.add('H2:H100')
 
+		ws_depts.sheet_state = "hidden"
 		wb.save(filepath)
 
 		#Sending the file as response
@@ -394,7 +399,7 @@ class UploadUserDeptView(AdminRequiredMixin, View):
 
 		errors= []
 		wb = openpyxl.load_workbook(file)
-		ws = wb.active
+		ws = wb['user_department']
 		for x in range(2, 101):
 			username = ws['A'+str(x)].value
 			name = ws['B'+str(x)].value
@@ -403,19 +408,16 @@ class UploadUserDeptView(AdminRequiredMixin, View):
 			age = ws['E'+str(x)].value
 			sex = ws['F'+str(x)].value
 			salutation = ws['G'+str(x)].value
-			dept_name = ws['K'+str(x)].value
+			dept_name = ws['J'+str(x)].value
 			if ws['H'+str(x)].value == "Fine":
 				health = True
 			else:
 				health = False
 			password1 = str(ws['I'+str(x)].value)
-			password2 = str(ws['J'+str(x)].value)
 			error = []
-			if None not in [username, name, email, mobile, age, sex, salutation, health, password1, password2]:
-				if '' in [username, name, email, mobile, age, sex, salutation, health, password1, password2]:
+			if None not in [username, name, email, mobile, age, sex, salutation, health, password1]:
+				if '' in [username, name, email, mobile, age, sex, salutation, health, password1]:
 					error.append('Some fields are empty')
-				if password1 != password2:
-					error.append('Passwords are not matching!')
 				try:
 					validate_email(email)
 				except ValidationError as e:
@@ -463,6 +465,7 @@ class DownloadFileProgramme(AdminRequiredMixin, View):
 		# Loading the excel file
 		wb1 = openpyxl.load_workbook(filepath)
 		ws1 = wb1.active
+		ws_depts = wb1['departments']
 
 		#Removing existing data downs if any
 		toRemove = []
@@ -474,11 +477,15 @@ class DownloadFileProgramme(AdminRequiredMixin, View):
 
 		#Adding new drop downs
 		department_names = Department.objects.values_list('name', flat=True)
-		dlist1 = ", ".join(department_names)
-		dlist1 = '"' + dlist1 + '"'
-		dv = openpyxl.worksheet.datavalidation.DataValidation(type="list", formula1=dlist1, allow_blank=True)
+		c = 1
+		for dept in department_names:
+			c += 1
+			ws_depts['A'+str(c)] = dept
+		depts_len = len(department_names)+1
+		dv = openpyxl.worksheet.datavalidation.DataValidation(type="list", formula1="{0}!$A$2:$A${1}".format(openpyxl.utils.quote_sheetname('departments'), depts_len), allow_blank=True)
 		ws1.add_data_validation(dv)
 		dv.add('C2:C100')
+		ws_depts.sheet_state = "hidden"
 		wb1.save(filepath)
 
 		#Sending the file as response
